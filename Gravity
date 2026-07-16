@@ -1,0 +1,249 @@
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const HolographicVortexApp());
+}
+
+class HolographicVortexApp extends StatelessWidget {
+  const HolographicVortexApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF040408), // Near absolute dark
+      ),
+      debugShowCheckedModeBanner: false,
+      home: const SpacetimeDistortionLab(),
+    );
+  }
+}
+
+class SpacetimeDistortionLab extends StatefulWidget {
+  const SpacetimeDistortionLab({super.key});
+
+  @override
+  State<SpacetimeDistortionLab> createState() => _SpacetimeDistortionLabState();
+}
+
+class _SpacetimeDistortionLabState extends State<SpacetimeDistortionLab>
+    with SingleTickerProviderStateMixin {
+  static const int seedCount = 1200;
+  late List<TimeParticle> particles;
+  late AnimationController _physicsTicker;
+
+  Offset? gravityWell; // Tracks finger coordinates (The Singularity)
+  double dynamicDistortion = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+
+    const double center = 300.0;
+    final double phi = (math.sqrt(5) + 1) / 2;
+    const double tau = math.pi * 2;
+
+    // Generate seeds into their native home grid positions
+    particles = List.generate(seedCount, (i) {
+      final double theta = i * tau / phi;
+      final double r = math.sqrt(i) * 7.8;
+
+      double homeX = center + r * math.cos(theta);
+      double homeY = center - r * math.sin(theta);
+
+      return TimeParticle(homeX: homeX, homeY: homeY);
+    });
+
+    // High performance frame loop
+    _physicsTicker = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..addListener(_updateSpacetimePhysics);
+    
+    _physicsTicker.repeat();
+  }
+
+  @override
+  void dispose() {
+    _physicsTicker.dispose();
+    super.dispose();
+  }
+
+  void _updateSpacetimePhysics() {
+    setState(() {
+      final Offset? well = gravityWell;
+
+      if (well != null) {
+        // Intensify cosmic distortion ripple over time
+        dynamicDistortion += (1.0 - dynamicDistortion) * 0.1;
+      } else {
+        // Cool down structural distortion when finger lifts
+        dynamicDistortion += (0.0 - dynamicDistortion) * 0.08;
+      }
+
+      for (var p in particles) {
+        if (well != null) {
+          // --- BLACK HOLE GRAVITY PHYSICS ---
+          double dx = well.dx - p.x;
+          double dy = well.dy - p.y;
+          double distance = math.sqrt(dx * dx + dy * dy);
+
+          // Avoid division by zero at absolute singularity center
+          if (distance < 5) distance = 5; 
+
+          // Gravitational attraction force matrix
+          double pullForce = (300.0 / distance).clamp(0.0, 8.0);
+
+          // Calculate perpendicular vector for the orbital swirling effect
+          double perpendicularX = -dy / distance;
+          double perpendicularY = dx / distance;
+
+          // Blend directional pull with dynamic vortex swirl vector
+          p.vx += (dx / distance) * pullForce * 0.15 + (perpendicularX * pullForce * 0.35);
+          p.vy += (dy / distance) * pullForce * 0.15 + (perpendicularY * pullForce * 0.35);
+
+          // Apply dampening air resistance to keep system stable
+          p.vx *= 0.92;
+          p.vy *= 0.92;
+
+          p.x += p.vx;
+          p.y += p.vy;
+        } else {
+          // --- SPACE TIME MEMORY FOAM SNAPBACK ---
+          // Smooth spring tension pulls particles back home
+          p.x += (p.homeX - p.x) * 0.08;
+          p.y += (p.homeY - p.y) * 0.08;
+          
+          // Clear remaining velocities
+          p.vx = 0;
+          p.vy = 0;
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          Center(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final double boundingSize = math.min(constraints.maxWidth, 600);
+                final Size canvasSize = Size(boundingSize, boundingSize);
+
+                return GestureDetector(
+                  onPanStart: (d) => setState(() => gravityWell = d.localPosition),
+                  onPanUpdate: (d) => setState(() => gravityWell = d.localPosition),
+                  onPanEnd: (_) => setState(() => gravityWell = null),
+                  child: Container(
+                    width: canvasSize.width,
+                    height: canvasSize.height,
+                    color: Colors.transparent,
+                    child: CustomPaint(
+                      painter: HolographicVortexPainter(
+                        particles: particles,
+                        distortion: dynamicDistortion,
+                        wellLocation: gravityWell,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          
+          // Technical UI readout
+          Positioned(
+            bottom: 50,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Text(
+                gravityWell != null 
+                    ? 'SINGULARITY DETECTED: WARPING CHROMATIC FABRIC'
+                    : 'DRAG FINGER TO INJECT GRAVITY WELLS',
+                style: TextStyle(
+                  fontFamily: 'Courier',
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                  color: gravityWell != null ? Colors.pinkAccent : Colors.cyanAccent.withOpacity(0.5),
+                ),
+              ),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+class TimeParticle {
+  double x;
+  double y;
+  final double homeX;
+  final double homeY;
+  double vx = 0; 
+  double vy = 0; 
+
+  TimeParticle({required this.homeX, required this.homeY})
+      : x = homeX,
+        y = homeY;
+}
+
+class HolographicVortexPainter extends CustomPainter {
+  final List<TimeParticle> particles;
+  final double distortion;
+  final Offset? wellLocation;
+
+  HolographicVortexPainter({
+    required this.particles,
+    required this.distortion,
+    required this.wellLocation,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Draw Singularity core glow if user touch is registered
+    final Offset? well = wellLocation;
+    if (well != null) {
+      final Paint eventHorizonPaint = Paint()
+        ..color = Colors.pinkAccent.withOpacity(0.04)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 25);
+      canvas.drawCircle(well, 60.0, eventHorizonPaint);
+    }
+
+    // 2. Render Chromatic Split Holographic Layers
+    for (var p in particles) {
+      // Shifting factor based on current distortion levels
+      double chromaticOffset = 1.8 * (1.0 + distortion * 2.5);
+
+      // Cyan layer (Shifted left)
+      final Paint cyanPaint = Paint()..color = const Color(0xAA00FFFF);
+      canvas.drawCircle(
+        Offset(p.x - chromaticOffset, p.y), 
+        1.5, 
+        cyanPaint
+      );
+
+      // Magenta/Neon Pink layer (Shifted right)
+      final Paint magentaPaint = Paint()..color = const Color(0xAAFF007F);
+      canvas.drawCircle(
+        Offset(p.x + chromaticOffset, p.y), 
+        1.5, 
+        magentaPaint
+      );
+      
+      // Core pure white center dot for depth stability
+      final Paint corePaint = Paint()..color = Colors.white.withOpacity(0.9);
+      canvas.drawCircle(Offset(p.x, p.y), 0.8, corePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant HolographicVortexPainter oldDelegate) => true;
+}
