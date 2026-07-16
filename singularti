@@ -1,0 +1,260 @@
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const SacredGeometryApp());
+}
+
+class SacredGeometryApp extends StatelessWidget {
+  const SacredGeometryApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF05050A),
+      ),
+      debugShowCheckedModeBanner: false,
+      home: const SacredMetamorphosisLab(),
+    );
+  }
+}
+
+class SacredMetamorphosisLab extends StatefulWidget {
+  const SacredMetamorphosisLab({super.key});
+
+  @override
+  State<SacredMetamorphosisLab> createState() => _SacredMetamorphosisLabState();
+}
+
+class _SacredMetamorphosisLabState extends State<SacredMetamorphosisLab>
+    with SingleTickerProviderStateMixin {
+  static const int totalParticles = 1200;
+  late List<MorphParticle> particles;
+  late AnimationController _rotationTicker;
+
+  double dimensionState = 0.33; // Starts on the natural Sunflower state
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Instantiate seeds with individual identity indexes
+    particles = List.generate(totalParticles, (index) => MorphParticle(index));
+
+    // Continuous rotation ticker to animate the 3D Tesseract and spatial shifts
+    _rotationTicker = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat();
+
+    _rotationTicker.addListener(() {
+      _calculateCoordinates();
+    });
+  }
+
+  @override
+  void dispose() {
+    _rotationTicker.dispose();
+    super.dispose();
+  }
+
+  void _calculateCoordinates() {
+    const double center = 300.0;
+    const double tau = math.pi * 2;
+    final double phi = (math.sqrt(5) + 1) / 2;
+    final double time = _rotationTicker.value * tau;
+
+    setState(() {
+      for (int i = 0; i < totalParticles; i++) {
+        final p = particles[i];
+
+        // --- STATE 0: THE SINGULARITY ---
+        double x0 = center;
+        double y0 = center;
+
+        // --- STATE 1: FIBONACCI SUNFLOWER ---
+        double theta1 = i * tau / phi;
+        double r1 = math.sqrt(i) * 7.5;
+        double x1 = center + r1 * math.cos(theta1);
+        double y1 = center - r1 * math.sin(theta1);
+
+        // --- STATE 2: FLOWER OF LIFE (Concentric Sacred Rings) ---
+        // Group particles into 6 structural branches spiraling outward
+        int branch = i % 6;
+        int ringLevel = i ~/ 6;
+        double ringRadius = ringLevel * 1.6;
+        double theta2 = (branch * tau / 6) + (ringLevel * 0.03); 
+        double x2 = center + ringRadius * math.cos(theta2);
+        double y2 = center + ringRadius * math.sin(theta2);
+
+        // --- STATE 3: THE TESSERACT (3D Projected Rotating Hypercube) ---
+        // Distribute coordinates uniformly onto 3D grid corners [-1, 0, 1]
+        double x3d = ((i % 5) - 2) * 80.0;
+        double y3d = (((i ~/ 5) % 5) - 2) * 80.0;
+        double z3d = (((i ~/ 25) % 5) - 2) * 80.0;
+
+        // 3D Rotation Transformations around Y and X axis
+        double cosY = math.cos(time);
+        double sinY = math.sin(time);
+        double cosX = math.cos(time * 0.5);
+        double sinX = math.sin(time * 0.5);
+
+        // Apply matrix math rotation
+        double rotZ = z3d * cosY - x3d * sinY;
+        double rotX = z3d * sinY + x3d * cosY;
+        double rotY = y3d * cosX - rotZ * sinX;
+
+        // Project 3D coordinate space onto a flat 2D screen coordinate
+        double distance = 400.0;
+        double perspective = distance / (distance + rotZ);
+        double x3 = center + rotX * perspective;
+        double y3 = center + rotY * perspective;
+
+        // --- MULTI-STAGE MORPH INTERPOLATION ---
+        double targetX, targetY;
+        
+        if (dimensionState < 0.33) {
+          // Morph: Singularity -> Sunflower
+          double t = dimensionState / 0.33;
+          targetX = _lerp(x0, x1, t);
+          targetY = _lerp(y0, y1, t);
+        } else if (dimensionState < 0.66) {
+          // Morph: Sunflower -> Flower of Life
+          double t = (dimensionState - 0.33) / 0.33;
+          targetX = _lerp(x1, x2, t);
+          targetY = _lerp(y1, y2, t);
+        } else {
+          // Morph: Flower of Life -> 3D Tesseract
+          double t = (dimensionState - 0.66) / 0.34;
+          targetX = _lerp(x2, x3, t);
+          targetY = _lerp(y2, y3, t);
+        }
+
+        // Apply smooth inertia tracking
+        p.x += (targetX - p.x) * 0.12;
+        p.y += (targetY - p.y) * 0.12;
+      }
+    });
+  }
+
+  double _lerp(double a, double b, double t) => a + (b - a) * t;
+
+  String _getDimensionName() {
+    if (dimensionState < 0.15) return "DIMENSION 0: THE SINGULARITY";
+    if (dimensionState >= 0.15 && dimensionState < 0.5) return "DIMENSION 1: FIBONACCI SUNFLOWER";
+    if (dimensionState >= 0.5 && dimensionState < 0.85) return "DIMENSION 2: FLOWER OF LIFE";
+    return "DIMENSION 3: THE HYPERCUBE TESSERACT";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          // The Geometric Canvas Area
+          Expanded(
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: SizedBox(
+                  width: 600,
+                  height: 600,
+                  child: CustomPaint(
+                    painter: SacredGeometryPainter(particles, dimensionState),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Control Desk Dashboard
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              children: [
+                Text(
+                  _getDimensionName(),
+                  style: const TextStyle(
+                    fontFamily: 'Courier',
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                    color: Colors.amberAccent,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Slider(
+                  activeColor: Colors.amber,
+                  inactiveColor: Colors.amber.withOpacity(0.15),
+                  min: 0.0,
+                  max: 1.0,
+                  value: dimensionState,
+                  onChanged: (val) {
+                    setState(() {
+                      dimensionState = val;
+                      _calculateCoordinates();
+                    });
+                  },
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class MorphParticle {
+  final int id;
+  double x = 300.0;
+  double y = 300.0;
+
+  MorphParticle(this.id);
+}
+
+class SacredGeometryPainter extends CustomPainter {
+  final List<MorphParticle> particles;
+  final double dimensionState;
+
+  SacredGeometryPainter(this.particles, this.dimensionState);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double center = size.width / 2;
+
+    for (var p in particles) {
+      double dx = p.x - center;
+      double dy = p.y - center;
+      double radiusDist = math.sqrt(dx * dx + dy * dy);
+      double normalizedDist = (radiusDist / center).clamp(0.0, 1.0);
+
+      // Color maps smoothly based on its distance from the origin core
+      Color particleColor = Color.lerp(
+        Colors.amberAccent,
+        Colors.deepOrange,
+        normalizedDist,
+      )!;
+
+      // Morphing color shifting as dimensions transcend
+      if (dimensionState > 0.66) {
+        particleColor = Color.lerp(particleColor, Colors.tealAccent, (dimensionState - 0.66) / 0.34)!;
+      }
+
+      final particlePaint = Paint()
+        ..color = particleColor.withOpacity(0.65)
+        ..style = PaintingStyle.fill;
+
+      // Make lines draw beautifully when collapsing or entering multidimensional paths
+      double sizeFactor = 1.2 + (1.0 - normalizedDist) * 1.5;
+      
+      canvas.drawCircle(Offset(p.x, p.y), sizeFactor, particlePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant SacredGeometryPainter oldDelegate) => true;
+}
