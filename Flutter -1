@@ -1,0 +1,204 @@
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+
+const int maxSeeds = 1000;
+
+void main() {
+  runApp(const Sunflower());
+}
+
+class Sunflower extends StatefulWidget {
+  const Sunflower({super.key});
+
+  @override
+  State<StatefulWidget> createState() => _SunflowerState();
+}
+
+class _SunflowerState extends State<Sunflower> with SingleTickerProviderStateMixin {
+  int seedsCount = maxSeeds ~/ 2;
+  late List<SeedParticle> particles;
+  late AnimationController _controller;
+  
+  // Constants for Sunflower layout
+  static const tau = math.pi * 2;
+  static final phi = (math.sqrt(5) + 1) / 2;
+  static const size = 600.0;
+  static const center = size / 2;
+  static const scaleFactor = 1 / 40;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Initialize particles array
+    particles = List.generate(maxSeeds, (index) => SeedParticle(index));
+    _updateParticleTargets();
+
+    // The ticker that drives the smooth physics updates at 60/120 fps
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..addListener(() {
+        _updatePhysics();
+      });
+      
+    _controller.repeat(); // Keep the simulation running dynamically
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  // Calculates where seeds SHOULD be according to the slider math
+  void _updateParticleTargets() {
+    for (int i = 0; i < maxSeeds; i++) {
+      final particle = particles[i];
+      final bool shouldBeLit = i < seedsCount;
+      
+      particle.isLit = shouldBeLit;
+
+      if (shouldBeLit) {
+        // Target coordinates inside the spiral structure
+        final theta = i * tau / phi;
+        final r = math.sqrt(i) * scaleFactor * 260; // scale up to fit canvas
+        particle.targetX = center + r * math.cos(theta);
+        particle.targetY = center - r * math.sin(theta);
+        particle.isFalling = false; // Magnetized back to structure
+      } else {
+        // Only trigger the falling physics if it was previously safe in the center
+        if (!particle.isFalling && particle.x == particle.targetX) {
+          final random = math.Random();
+          particle.isFalling = true;
+          // Give it an initial dynamic outward kick/burst
+          particle.vx = (random.nextDouble() - 0.5) * 6; 
+          particle.vy = -random.nextDouble() * 5 - 2; // Upward jump before drop
+        }
+        // Target resting spot on the outer rim boundary
+        final angle = tau * i / (maxSeeds - 1);
+        particle.targetX = center + math.cos(angle) * (center * 0.95);
+        particle.targetY = center + math.sin(angle) * (center * 0.95);
+      }
+    }
+  }
+
+  // Updates the actual canvas positions framework-wide using simple math vectors
+  void _updatePhysics() {
+    setState(() {
+      for (var particle in particles) {
+        if (particle.isFalling) {
+          // --- FALLING MODE ---
+          particle.vy += 0.25; // Apply constant downward gravity
+          particle.vx *= 0.98; // Apply minor air resistance drag
+          
+          particle.x += particle.vx;
+          particle.y += particle.vy;
+
+          // Once it hits the bottom screen area or flies away, drift smoothly to outer boundary rim
+          if (particle.y > size * 0.85 || particle.x < 0 || particle.x > size) {
+            particle.x += (particle.targetX - particle.x) * 0.05;
+            particle.y += (particle.targetY - particle.y) * 0.05;
+          }
+        } else {
+          // --- MAGNETIZED MAGNETIC BACK TO SUNFLOWER MODE ---
+          // Smoothly slide back into structure alignment (Spring interpolation)
+          particle.x += (particle.targetX - particle.x) * 0.12;
+          particle.y += (particle.targetY - particle.y) * 0.12;
+          particle.vx = 0;
+          particle.vy = 0;
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        appBarTheme: const AppBarTheme(elevation: 2),
+      ),
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        appBar: AppBar(title: const Text('Dynamic Falling Sunflower')),
+        body: Center(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: SizedBox(
+                    width: size,
+                    height: size,
+                    child: CustomPaint(
+                      painter: SunflowerPhysicsPainter(particles),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text('Showing $seedsCount seeds'),
+              SizedBox(
+                width: 300,
+                child: Slider(
+                  min: 1,
+                  max: maxSeeds.toDouble(),
+                  value: seedsCount.toDouble(),
+                  onChanged: (val) {
+                    setState(() {
+                      seedsCount = val.round();
+                      _updateParticleTargets();
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Particle Class to track properties of every distinct seed element
+class SeedParticle {
+  final int id;
+  double x = 300;
+  double y = 300;
+  double targetX = 300;
+  double targetY = 300;
+  double vx = 0; // Velocity X
+  double vy = 0; // Velocity Y
+  bool isLit = true;
+  bool isFalling = false;
+
+  SeedParticle(this.id);
+}
+
+// Custom Painter designed for high performance drawing loops
+class SunflowerPhysicsPainter extends CustomPainter {
+  final List<SeedParticle> particles;
+  SunflowerPhysicsPainter(this.particles);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paintLit = Paint()..color = Colors.orange;
+    final paintDark = Paint()..color = Colors.grey.shade700;
+    
+    // Custom glowing tail effect if desired can be drawn here
+
+    for (var particle in particles) {
+      // Glow active items brightly, fade tumbling structural components out softly
+      final paint = particle.isLit ? paintLit : paintDark;
+      
+      // Draw the circular elements cleanly onto computed locations
+      canvas.drawCircle(Offset(particle.x, particle.y), 3.0, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant SunflowerPhysicsPainter oldDelegate) => true;
+}
