@@ -1,0 +1,256 @@
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+
+const int maxSeeds = 1200; // Increased seed count for a denser, more infinite look
+
+void main() {
+  runApp(const Sunflower());
+}
+
+class Sunflower extends StatefulWidget {
+  const Sunflower({super.key});
+
+  @override
+  State<StatefulWidget> createState() => _SunflowerState();
+}
+
+class _SunflowerState extends State<Sunflower> with SingleTickerProviderStateMixin {
+  int seedsCount = maxSeeds ~/ 2;
+  late List<HypnoticSeed> particles;
+  late AnimationController _controller;
+  
+  // Design configuration
+  static const size = 600.0;
+  static const center = size / 2;
+  static final phi = (math.sqrt(5) + 1) / 2;
+  static const tau = math.pi * 2;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Initialize particles array
+    particles = List.generate(maxSeeds, (index) => HypnoticSeed(index));
+    _updateParticleTargets();
+
+    // Infinite render loop at 60/120 FPS
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..addListener(() {
+        _updatePhysics();
+      });
+      
+    _controller.repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _updateParticleTargets() {
+    for (int i = 0; i < maxSeeds; i++) {
+      final particle = particles[i];
+      final bool shouldBeLit = i < seedsCount;
+      particle.isLit = shouldBeLit;
+
+      // Golden ratio spiral calculation
+      final theta = i * tau / phi;
+      // Exponential distribution to make the center look packed and infinite
+      final r = math.pow(i / maxSeeds, 0.6) * (size * 0.45); 
+
+      if (shouldBeLit) {
+        particle.targetX = center + r * math.cos(theta);
+        particle.targetY = center - r * math.sin(theta);
+        particle.isVortexed = false;
+      } else {
+        // Switch to the hypnosis vortex system
+        if (!particle.isVortexed) {
+          particle.isVortexed = true;
+          // Assign random swirling traits so they don't look uniform
+          final rand = math.Random();
+          particle.vortexSpeed = 0.04 + rand.nextDouble() * 0.04;
+          particle.sinkSpeed = 0.98 - (rand.nextDouble() * 0.02);
+        }
+      }
+    }
+  }
+
+  void _updatePhysics() {
+    setState(() {
+      for (var particle in particles) {
+        if (particle.isVortexed) {
+          // --- HYPNOTIC VORTEX MODE (Sucked into Infinity) ---
+          // Calculate current distance and angle from the absolute center
+          double dx = particle.x - center;
+          double dy = particle.y - center;
+          double currentR = math.sqrt(dx * dx + dy * dy);
+          double currentAngle = math.atan2(dy, dx);
+
+          // 1. Spin the particle around the center point
+          currentAngle += particle.vortexSpeed;
+
+          // 2. Pull the particle inward toward the center (black hole effect)
+          currentR *= particle.sinkSpeed;
+
+          // 3. If it gets infinitely close to the center, spit it back out to the edges
+          if (currentR < 2.0) {
+            currentR = center * 0.95; 
+            currentAngle = math.Random().nextDouble() * tau;
+          }
+
+          // Convert polar coordinates back to X/Y
+          particle.x = center + currentR * math.cos(currentAngle);
+          particle.y = center + currentR * math.sin(currentAngle);
+        } else {
+          // --- MAGNETIZED TO STRUCTURE MODE ---
+          // Smoothly snap back onto the structural grid
+          particle.x += (particle.targetX - particle.x) * 0.08;
+          particle.y += (particle.targetY - particle.y) * 0.08;
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF07070F), // Ultra deep space black
+      ),
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text('Hypnotic Infinity Spiral'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
+        body: Center(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: Container(
+                    width: size,
+                    height: size,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.deepPurple.withOpacity(0.15),
+                          blurRadius: 100,
+                          spreadRadius: 20,
+                        )
+                      ],
+                    ),
+                    child: CustomPaint(
+                      painter: HypnoticPainter(particles, _controller.value),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Mind Control: ${((seedsCount / maxSeeds) * 100).round()}%',
+                style: const TextStyle(color: Colors.purpleAccent, letterSpacing: 1.5, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(
+                width: 320,
+                child: Slider(
+                  activeColor: Colors.purpleAccent,
+                  inactiveColor: Colors.deepPurple.shade900,
+                  min: 1,
+                  max: maxSeeds.toDouble(),
+                  value: seedsCount.toDouble(),
+                  onChanged: (val) {
+                    setState(() {
+                      seedsCount = val.round();
+                      _updateParticleTargets();
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 30),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class HypnoticSeed {
+  final int id;
+  double x = 300;
+  double y = 300;
+  double targetX = 300;
+  double targetY = 300;
+  
+  bool isLit = true;
+  bool isVortexed = false;
+  
+  // Custom rotation parameters per seed
+  double vortexSpeed = 0.05;
+  double sinkSpeed = 0.98;
+
+  HypnoticSeed(this.id);
+}
+
+class HypnoticPainter extends CustomPainter {
+  final List<HypnoticSeed> particles;
+  final double pulseValue; // Used to animate the background glow dynamically
+  
+  HypnoticPainter(this.particles, this.pulseValue);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final centerPoint = Offset(size.width / 2, size.height / 2);
+
+    // 1. Draw a subtle, breathing "Infinity Void" in the absolute center
+    final double pulseRadius = 15 + (math.sin(pulseValue * math.pi * 2) * 5);
+    final voidPaint = Paint()
+      ..color = Colors.black
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(centerPoint, pulseRadius, voidPaint);
+
+    // 2. Setup Paints for the nodes
+    final activePaint = Paint()..color = const Color(0xFFFF9800);
+    
+    for (var particle in particles) {
+      Offset pos = Offset(particle.x, particle.y);
+      
+      if (particle.isLit) {
+        // Glowing Golden Ratio sunflower node
+        canvas.drawCircle(pos, 3.5, activePaint);
+      } else {
+        // Hypnotic fading tail particles
+        double dx = particle.x - (size.width / 2);
+        double dy = particle.y - (size.height / 2);
+        double currentR = math.sqrt(dx * dx + dy * dy);
+        
+        // Colors morph dynamically based on how close they get to the infinite void center
+        double normalizedDist = (currentR / (size.width / 2)).clamp(0.0, 1.0);
+        Color hypnoticColor = Color.lerp(
+          Colors.cyanAccent, 
+          Colors.purple.shade900, 
+          1.0 - normalizedDist
+        )!;
+
+        final trailingPaint = Paint()..color = hypnoticColor.withOpacity(0.7);
+        // Seeds shrink as they fall into infinity
+        double dynamicSize = 1.0 + (normalizedDist * 2.5); 
+        
+        canvas.drawCircle(pos, dynamicSize, trailingPaint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant HypnoticPainter oldDelegate) => true;
+}
