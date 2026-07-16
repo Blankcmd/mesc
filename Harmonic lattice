@@ -1,0 +1,285 @@
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const QuantumLatticeApp());
+}
+
+class QuantumLatticeApp extends StatelessWidget {
+  const QuantumLatticeApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF020205), // Absolute deep void
+      ),
+      debugShowCheckedModeBanner: false,
+      home: const QuantumLatticeLab(),
+    );
+  }
+}
+
+class QuantumLatticeLab extends StatefulWidget {
+  const QuantumLatticeLab({super.key});
+
+  @override
+  State<QuantumLatticeLab> createState() => _QuantumLatticeLabState();
+}
+
+class _QuantumLatticeLabState extends State<QuantumLatticeLab>
+    with SingleTickerProviderStateMixin {
+  static const int particleCount = 1600;
+  late List<QuantumNode> nodes;
+  late AnimationController _physicsTicker;
+
+  Offset? activeSingularity; 
+  double pulseCycle = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+
+    const double center = 300.0;
+    
+    // Generate an advanced Parametric Hypotrochoid / Rose Lattice
+    nodes = List.generate(particleCount, (i) {
+      // Step distribution through structural equations
+      double t = (i / particleCount) * math.pi * 2 * 12; // 12 structural revolutions
+      
+      // Multi-harmonic orbital frequencies creates the complex sacred geometry shape
+      double r = 160 * math.sin(2.4 * t) + 50 * math.cos(5.6 * t);
+      
+      // Dynamic noise matrix maps standard coordinates out to initial home coordinates
+      double homeX = center + r * math.cos(t);
+      double homeY = center + r * math.sin(t);
+
+      return QuantumNode(
+        homeX: homeX, 
+        homeY: homeY,
+        basePhase: i * 0.005,
+      );
+    });
+
+    _physicsTicker = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..addListener(_updateQuantumPhysics);
+    
+    _physicsTicker.repeat();
+  }
+
+  @override
+  void dispose() {
+    _physicsTicker.dispose();
+    super.dispose();
+  }
+
+  void _updateQuantumPhysics() {
+    setState(() {
+      pulseCycle += 0.025; // Continuous organic breathing phase cycle
+      final Offset? well = activeSingularity;
+
+      for (var n in nodes) {
+        // Breathing animation applied to background resting positions
+        double breathingRadius = 6.0 * math.sin(pulseCycle + n.basePhase * 10);
+        double currentHomeX = n.homeX + (math.cos(pulseCycle) * breathingRadius);
+        double currentHomeY = n.homeY + (math.sin(pulseCycle) * breathingRadius);
+
+        if (well != null) {
+          // --- STRUCTURAL STRING QUANTUM ATTRACTOR ---
+          double dx = well.dx - n.x;
+          double dy = well.dy - n.y;
+          double distance = math.sqrt(dx * dx + dy * dy);
+
+          if (distance < 8) distance = 8; 
+
+          // Inverse square law simulation with capped threshold limit
+          double pullForce = (450.0 / distance).clamp(0.0, 15.0);
+
+          // Complex Waveform vectors: Creates a double-helix cross weave
+          double orbitalDirection = (n.basePhase * 100).floor() % 2 == 0 ? 1.0 : -1.0;
+          double perpX = (-dy / distance) * orbitalDirection;
+          double perpY = (dx / distance) * orbitalDirection;
+
+          // Physics integration
+          n.vx += (dx / distance) * pullForce * 0.2 + (perpX * pullForce * 0.45);
+          n.vy += (dy / distance) * pullForce * 0.2 + (perpY * pullForce * 0.45);
+
+          // High viscosity friction prevents visual shattering or explosions
+          n.vx *= 0.88;
+          n.vy *= 0.88;
+
+          n.x += n.vx;
+          n.y += n.vy;
+          n.excitation = (n.excitation + (pullForce / 15.0)).clamp(0.0, 1.0);
+        } else {
+          // --- GEOMETRIC SNAPBACK & DECAY SYSTEM ---
+          n.x += (currentHomeX - n.x) * 0.09;
+          n.y += (currentHomeY - n.y) * 0.09;
+          
+          n.vx = 0;
+          n.vy = 0;
+          
+          // Cool down color shift excitation levels back to dormant state
+          n.excitation += (0.0 - n.excitation) * 0.05;
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          Center(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final double sizeDimension = math.min(constraints.maxWidth, 600);
+                final Size canvasSize = Size(sizeDimension, sizeDimension);
+
+                return GestureDetector(
+                  onPanStart: (d) => setState(() => activeSingularity = d.localPosition),
+                  onPanUpdate: (d) => setState(() => activeSingularity = d.localPosition),
+                  onPanEnd: (_) => setState(() => activeSingularity = null),
+                  child: Container(
+                    width: canvasSize.width,
+                    height: canvasSize.height,
+                    color: Colors.transparent,
+                    child: CustomPaint(
+                      painter: QuantumGeometryPainter(
+                        nodes: nodes,
+                        singularity: activeSingularity,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          
+          // Minimalist UI Dashboard HUD
+          Positioned(
+            top: 60,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Text(
+                'QUANTUM HARMONIC LATTICE',
+                style: TextStyle(
+                  fontFamily: 'Courier',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 4.0,
+                  color: Colors.white.withOpacity(0.4),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 60,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Text(
+                activeSingularity != null 
+                    ? 'GEOMETRY MATRIX COLLAPSED // DISTORTION ACTIVE'
+                    : 'INTERACT TO RUPTURE HARMONIC RESONANCE',
+                style: TextStyle(
+                  fontFamily: 'Courier',
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2.0,
+                  color: activeSingularity != null ? const Color(0xFFBD00FF) : const Color(0xFF00FFCC).withOpacity(0.4),
+                ),
+              ),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+class QuantumNode {
+  double x;
+  double y;
+  final double homeX;
+  final double homeY;
+  final double basePhase;
+  double vx = 0; 
+  double vy = 0; 
+  double excitation = 0.0; // Value between 0.0 and 1.0 mapping physical stress
+
+  QuantumNode({required this.homeX, required this.homeY, required this.basePhase})
+      : x = homeX,
+        y = homeY;
+}
+
+class QuantumGeometryPainter extends CustomPainter {
+  final List<QuantumNode> nodes;
+  final Offset? singularity;
+
+  QuantumGeometryPainter({
+    required this.nodes,
+    required this.singularity,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Draw central structural shadow gravity rings if finger is down
+    final Offset? target = singularity;
+    if (target != null) {
+      final Paint fieldPaint = Paint()
+        ..color = const Color(0xFF00FFCC).withOpacity(0.02)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.0;
+      canvas.drawCircle(target, 40.0, fieldPaint);
+      canvas.drawCircle(target, 80.0, fieldPaint..color = const Color(0xFFBD00FF).withOpacity(0.01));
+    }
+
+    // Allocate continuous point lists for instant high performance batch processing
+    final List<Offset> dormantPoints = [];
+    final List<Offset> excitedPoints = [];
+    final List<Offset> corePoints = [];
+
+    for (var n in nodes) {
+      final Offset position = Offset(n.x, n.y);
+      corePoints.add(position);
+      
+      // Separate rendering bins depending on node internal strain calculations
+      if (n.excitation > 0.4) {
+        excitedPoints.add(position);
+      } else {
+        dormantPoints.add(position);
+      }
+    }
+
+    // 2. Render Dormant Base Matrix (Deep Turquoise Glow Layer)
+    final Paint paintDormant = Paint()
+      ..color = const Color(0x9900FFCC)
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPoints(ui.PointMode.points, dormantPoints, paintDormant);
+
+    // 3. Render High-Excitation Overlays (Deep Violet/Hot Pink Quantum Warp Layer)
+    final Paint paintExcited = Paint()
+      ..color = const Color(0xFFFF007F)
+      ..strokeWidth = 3.5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPoints(ui.PointMode.points, excitedPoints, paintExcited);
+
+    // 4. Render Stellar Core Pins (Sharp white center layer providing clear pattern depth)
+    final Paint paintCore = Paint()
+      ..color = Colors.white.withOpacity(0.95)
+      ..strokeWidth = 1.1
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPoints(ui.PointMode.points, corePoints, paintCore);
+  }
+
+  @override
+  bool shouldRepaint(covariant QuantumGeometryPainter oldDelegate) => true;
+}
