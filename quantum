@@ -1,0 +1,340 @@
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const ChaosEngineApp());
+}
+
+class ChaosEngineApp extends StatelessWidget {
+  const ChaosEngineApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF030307),
+      ),
+      debugShowCheckedModeBanner: false,
+      home: const QuantumSandbox(),
+    );
+  }
+}
+
+class QuantumSandbox extends StatefulWidget {
+  const QuantumSandbox({super.key});
+
+  @override
+  State<QuantumSandbox> createState() => _QuantumSandboxState();
+}
+
+class _QuantumSandboxState extends State<QuantumSandbox>
+    with SingleTickerProviderStateMixin {
+  static const int nodeCount = 800; // Optimized count for real-time web calculations
+  late List<QuantumNode> nodes;
+  late AnimationController _engineTicker;
+
+  // Real-time Dashboard Controls
+  double structuralMorph = 0.0; // 0.0 = Sunflower, 1.0 = Flower of Life
+  double chaosEntropy = 0.0;    // 0.0 = Still, 1.0 = High Turbulence Chaos
+  bool quantumStrings = false;  // Connects nodes with interactive vectors
+  
+  Offset? activeSingularity;    // Finger position black hole
+
+  @override
+  void initState() {
+    super.initState();
+    final rand = math.Random();
+    
+    // Instantiate nodes with randomized internal velocities and chaos vectors
+    nodes = List.generate(nodeCount, (index) {
+      return QuantumNode(
+        id: index,
+        vx: (rand.nextDouble() - 0.5) * 2,
+        vy: (rand.nextDouble() - 0.5) * 2,
+        varianceX: rand.nextDouble() - 0.5,
+        varianceY: rand.nextDouble() - 0.5,
+      );
+    });
+
+    _engineTicker = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..addListener(_runQuantumPhysicsEngine);
+    
+    _engineTicker.repeat();
+  }
+
+  @override
+  void dispose() {
+    _engineTicker.dispose();
+    super.dispose();
+  }
+
+  void _runQuantumPhysicsEngine() {
+    const double center = 300.0;
+    const double tau = math.pi * 2;
+    final double phi = (math.sqrt(5) + 1) / 2;
+    final double time = _engineTicker.value * tau;
+
+    setState(() {
+      for (int i = 0; i < nodeCount; i++) {
+        final n = nodes[i];
+
+        // 1. COMPUTE BASE ARCHETYPE A: SUNFLOWER
+        double thetaA = i * tau / phi;
+        double rA = math.sqrt(i) * 9.5;
+        double xA = center + rA * math.cos(thetaA);
+        double yA = center - rA * math.sin(thetaA);
+
+        // 2. COMPUTE BASE ARCHETYPE B: FLOWER OF LIFE
+        int branch = i % 8;
+        int ringLevel = i ~/ 8;
+        double rB = ringLevel * 2.8;
+        double thetaB = (branch * tau / 8) + (ringLevel * 0.02);
+        double xB = center + rB * math.cos(thetaB);
+        double yB = center + rB * math.sin(thetaB);
+
+        // Interpolate between layouts based on user slider
+        double targetX = xA + (xB - xA) * structuralMorph;
+        double targetY = yA + (yB - yA) * structuralMorph;
+
+        // 3. INJECT QUANTUM ENTROPY (CHAOS)
+        if (chaosEntropy > 0) {
+          double noiseX = math.sin(time + i) * 60.0 * chaosEntropy * n.varianceX;
+          double noiseY = math.cos(time + i) * 60.0 * chaosEntropy * n.varianceY;
+          targetX += noiseX;
+          targetY += noiseY;
+        }
+
+        // 4. INJECT SINGLE EXPLOSIVE BLACK HOLE MOUSE/TOUCH PULL
+        final Offset? singularity = activeSingularity;
+        if (singularity != null) {
+          double dx = singularity.dx - n.x;
+          double dy = singularity.dy - n.y;
+          double distance = math.sqrt(dx * dx + dy * dy).clamp(5.0, 600.0);
+
+          double pull = (450.0 / distance).clamp(0.0, 12.0);
+          double orbitX = -dy / distance;
+          double orbitY = dx / distance;
+
+          // Pull vector blended into orbital swirl velocity
+          n.vx += (dx / distance) * pull * 0.12 + (orbitX * pull * 0.25);
+          n.vy += (dy / distance) * pull * 0.12 + (orbitY * pull * 0.25);
+
+          n.vx *= 0.93;
+          n.vy *= 0.93;
+          n.x += n.vx;
+          n.y += n.vy;
+        } else {
+          // Snapback tracking inertia when not touched
+          n.x += (targetX - n.x) * 0.08;
+          n.y += (targetY - n.y) * 0.08;
+          n.vx = 0;
+          n.vy = 0;
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            // TOP HUB INFORMATION READOUT
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Text(
+                    'QUANTUM MULTIVERSE SANDBOX',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 3, color: Colors.cyanAccent),
+                  ),
+                  SizedBox(height: 4),
+                  Text('INTERACTIVE MATRIX LAWS ENGINE', style: TextStyle(fontSize: 10, color: Colors.white30, letterSpacing: 1.5)),
+                ],
+              ),
+            ),
+
+            // DYNAMIC SPACE VIEWPORT
+            Expanded(
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: GestureDetector(
+                    onPanStart: (d) => setState(() => activeSingularity = d.localPosition),
+                    onPanUpdate: (d) => setState(() => activeSingularity = d.localPosition),
+                    onPanEnd: (_) => setState(() => activeSingularity = null),
+                    child: Container(
+                      width: 600,
+                      height: 600,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white10, width: 0.5),
+                        color: const Color(0xFF06060E),
+                      ),
+                      child: CustomPaint(
+                        painter: QuantumChaosPainter(
+                          nodes: nodes,
+                          showStrings: quantumStrings,
+                          singularity: activeSingularity,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // USER SPACE CONFIGURATION DASHBOARD PANEL
+            Container(
+              padding: const EdgeInsets.all(20),
+              color: const Color(0xFF0A0A14),
+              child: Column(
+                children: [
+                  // Slider 1: Geometry Morphing
+                  Row(
+                    children: [
+                      const SizedBox(width: 100, child: Text('MORPHING', style: TextStyle(fontSize: 11, letterSpacing: 1))),
+                      Expanded(
+                        child: Slider(
+                          activeColor: Colors.cyanAccent,
+                          value: structuralMorph,
+                          onChanged: (v) => setState(() => structuralMorph = v),
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  // Slider 2: Chaos Entropy Input
+                  Row(
+                    children: [
+                      const SizedBox(width: 100, child: Text('ENTROPY', style: TextStyle(fontSize: 11, letterSpacing: 1))),
+                      Expanded(
+                        child: Slider(
+                          activeColor: Colors.deepOrangeAccent,
+                          value: chaosEntropy,
+                          onChanged: (v) => setState(() => chaosEntropy = v),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Toggle Switch 3: Quantum Neural String Web
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('QUANTUM ENTANGLEMENT STRINGS', style: TextStyle(fontSize: 11, letterSpacing: 1)),
+                      Switch(
+                        activeColor: Colors.purpleAccent,
+                        value: quantumStrings,
+                        onChanged: (v) => setState(() => quantumStrings = v),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class QuantumNode {
+  final int id;
+  double x = 300.0;
+  double y = 300.0;
+  double vx;
+  double vy;
+  final double varianceX;
+  final double varianceY;
+
+  QuantumNode({
+    required this.id,
+    required this.vx,
+    required this.vy,
+    required this.varianceX,
+    required this.varianceY,
+  });
+}
+
+class QuantumChaosPainter extends CustomPainter {
+  final List<QuantumNode> nodes;
+  final bool showStrings;
+  final Offset? singularity;
+
+  QuantumChaosPainter({
+    required this.nodes,
+    required this.showStrings,
+    required this.singularity,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double center = size.width / 2;
+
+    // A. OPTIONAL ENGINE DRAW: INTERACTIVE ENTANGLEMENT VECTORS (NEURAL WEB STRINGS)
+    if (showStrings) {
+      final stringPaint = Paint()..style = PaintingStyle.stroke;
+      
+      // Compare local node limits to create structural webbing lines
+      for (int i = 0; i < nodes.length; i += 3) { // Step by 3 for flawless smooth frame performance
+        for (int j = i + 1; j < i + 6; j++) {
+          if (j >= nodes.length) break;
+          
+          double dx = nodes[i].x - nodes[j].x;
+          double dy = nodes[i].y - nodes[j].y;
+          double dist = math.sqrt(dx * dx + dy * dy);
+
+          // Only draw web line vector if nodes are close enough together
+          if (dist < 38.0) {
+            stringPaint.color = Colors.purpleAccent.withOpacity((1.0 - (dist / 38.0)) * 0.25);
+            stringPaint.strokeWidth = 0.5;
+            canvas.drawLine(Offset(nodes[i].x, nodes[i].y), Offset(nodes[j].x, nodes[j].y), stringPaint);
+          }
+        }
+      }
+    }
+
+    // B. COMPUTE CORE NODE PARTICLES RENDER MATRIX
+    for (var n in nodes) {
+      double dx = n.x - center;
+      double dy = n.y - center;
+      double radiusDist = math.sqrt(dx * dx + dy * dy);
+      double normalizedDist = (radiusDist / center).clamp(0.0, 1.0);
+
+      // Color spectral map shifts based on core orbital positioning
+      Color nodeColor = Color.lerp(
+        Colors.cyanAccent,
+        Colors.deepPurpleAccent,
+        normalizedDist,
+      )!;
+
+      final nodePaint = Paint()
+        ..color = nodeColor.withOpacity(0.7)
+        ..style = PaintingStyle.fill;
+
+      canvas.drawCircle(Offset(n.x, n.y), 1.8, nodePaint);
+    }
+
+    // C. DRAW REACTION HORIZON EVENT FIELD GLOW
+    final Offset? well = singularity;
+    if (well != null) {
+      canvas.drawCircle(well, 8, Paint()..color = Colors.cyanAccent.withOpacity(0.4));
+      canvas.drawCircle(
+        well, 
+        45, 
+        Paint()
+          ..color = Colors.cyanAccent.withOpacity(0.04)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant QuantumChaosPainter oldDelegate) => true;
+}
