@@ -1,0 +1,559 @@
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const JoJoTimeEngineApp());
+}
+
+class JoJoTimeEngineApp extends StatelessWidget {
+  const JoJoTimeEngineApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF030206),
+      ),
+      debugShowCheckedModeBanner: false,
+      home: const ChronosGodLab(),
+    );
+  }
+}
+
+enum StandAbility {
+  zaWarudo,     // DIO: Stop Time (Inverted Monochrome Wave)
+  kingCrimson,  // Diavolo: Erase Time (Blood Red Distortion & Skip)
+  bitesTheDust, // Kira: Time Loop Rewind
+  madeInHeaven, // Pucci: Infinite Universe Speed Acceleration
+  normalFlow,   // Standard Time
+}
+
+enum InterstellarRealm {
+  chronosClock,  // Roman Clock Face
+  eldritchRings, // Mystic Tao Mandalas
+  spiderVerse,   // Web Grid
+  milkyWay,      // Galaxy Spiral
+}
+
+class ChronosGodLab extends StatefulWidget {
+  const ChronosGodLab({super.key});
+
+  @override
+  State<ChronosGodLab> createState() => _ChronosGodLabState();
+}
+
+class _ChronosGodLabState extends State<ChronosGodLab>
+    with SingleTickerProviderStateMixin {
+  static const int seedCount = 1300;
+  late List<JoJoParticle> particles;
+  late AnimationController _physicsTicker;
+
+  // Stand Physics State
+  Offset? touchPosition;
+  double dynamicDistortion = 0.0;
+  InterstellarRealm activeRealm = InterstellarRealm.chronosClock;
+  StandAbility currentStand = StandAbility.normalFlow;
+
+  double clockAngle = 0.0;
+  double standAuraEnergy = 0.0; // Flash effect intensity
+  int timeStopTimer = 0;        // Ticks remaining in Za Warudo
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeParticles();
+
+    _physicsTicker = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..addListener(_updatePhysicsEngine);
+
+    _physicsTicker.repeat();
+  }
+
+  void _initializeParticles() {
+    const double center = 300.0;
+    final double phi = (math.sqrt(5) + 1) / 2;
+    const double tau = math.pi * 2;
+    final math.Random rand = math.Random(1337);
+
+    particles = List.generate(seedCount, (i) {
+      final double theta = i * tau / phi;
+      final double r = math.sqrt(i) * 7.8;
+
+      double homeX = center + r * math.cos(theta);
+      double homeY = center - r * math.sin(theta);
+
+      return JoJoParticle(
+        id: i,
+        homeX: homeX,
+        homeY: homeY,
+        phase: rand.nextDouble() * tau,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _physicsTicker.dispose();
+    super.dispose();
+  }
+
+  void _activateStand(StandAbility ability) {
+    setState(() {
+      currentStand = ability;
+      standAuraEnergy = 1.0;
+
+      if (ability == StandAbility.zaWarudo) {
+        timeStopTimer = 300; // ~5 Seconds of frozen time
+      } else if (ability == StandAbility.kingCrimson) {
+        // Erase Time: Instantly skip 10 seconds of particle movement
+        clockAngle += math.pi * 2.0;
+      } else if (ability == StandAbility.bitesTheDust) {
+        // Rewind back to zero
+        clockAngle = 0.0;
+      }
+    });
+  }
+
+  void _updatePhysicsEngine() {
+    setState(() {
+      final Offset? touch = touchPosition;
+
+      if (standAuraEnergy > 0) {
+        standAuraEnergy = (standAuraEnergy - 0.03).clamp(0.0, 1.0);
+      }
+
+      // Handle Za Warudo Time Stop Duration
+      if (currentStand == StandAbility.zaWarudo) {
+        if (timeStopTimer > 0) {
+          timeStopTimer--;
+        } else {
+          currentStand = StandAbility.normalFlow;
+        }
+      }
+
+      // Calculate Speed Multiplier
+      double temporalSpeed = 1.0;
+      if (currentStand == StandAbility.madeInHeaven) temporalSpeed = 12.0;
+      if (currentStand == StandAbility.bitesTheDust) temporalSpeed = -4.0;
+      if (currentStand == StandAbility.zaWarudo) temporalSpeed = 0.0;
+
+      clockAngle += 0.015 * temporalSpeed;
+
+      if (touch != null) {
+        dynamicDistortion += (1.0 - dynamicDistortion) * 0.1;
+      } else {
+        dynamicDistortion += (0.0 - dynamicDistortion) * 0.08;
+      }
+
+      final double center = 300.0;
+      final double time = clockAngle;
+
+      for (int i = 0; i < seedCount; i++) {
+        var p = particles[i];
+
+        if (currentStand == StandAbility.zaWarudo) {
+          // Absolute Time Freeze - No position updates
+          continue;
+        }
+
+        double targetX = p.homeX;
+        double targetY = p.homeY;
+
+        switch (activeRealm) {
+          case InterstellarRealm.chronosClock:
+            double r = 35.0 + (i % 12) * 16.0;
+            double a = (i ~/ 12) * (math.pi * 2 / 100) + time;
+            targetX = center + r * math.cos(a);
+            targetY = center + r * math.sin(a);
+            break;
+
+          case InterstellarRealm.eldritchRings:
+            int ring = i ~/ 12;
+            int spoke = i % 12;
+            double radius = ring * 12.0;
+            double ringAngle = spoke * (math.pi * 2 / 12) + time;
+            targetX = center + radius * math.cos(ringAngle);
+            targetY = center + radius * math.sin(ringAngle);
+            break;
+
+          case InterstellarRealm.spiderVerse:
+            int ring = i ~/ 12;
+            int spoke = i % 12;
+            double radius = ring * 12.0;
+            double angle = spoke * (math.pi * 2 / 12);
+            targetX = center + radius * math.cos(angle);
+            targetY = center + radius * math.sin(angle);
+            break;
+
+          case InterstellarRealm.milkyWay:
+            double spiralDist = (i / seedCount) * 260.0;
+            double spiralAngle = (i % 4) * (math.pi / 2) + (spiralDist * 0.035) + time;
+            targetX = center + spiralDist * math.cos(spiralAngle);
+            targetY = center + spiralDist * math.sin(spiralAngle);
+            break;
+        }
+
+        if (touch != null) {
+          double dx = touch.dx - p.x;
+          double dy = touch.dy - p.y;
+          double distance = math.sqrt(dx * dx + dy * dy);
+          if (distance < 5) distance = 5;
+
+          double pull = (1.0 - (distance / 200.0)).clamp(0.0, 1.0) * 0.35;
+          p.vx += dx * pull;
+          p.vy += dy * pull;
+
+          p.vx *= 0.88;
+          p.vy *= 0.88;
+          p.x += p.vx;
+          p.y += p.vy;
+        } else {
+          double returnSpeed = 0.08 * temporalSpeed.abs();
+          p.x += (targetX - p.x) * returnSpeed;
+          p.y += (targetY - p.y) * returnSpeed;
+          p.vx *= 0.85;
+          p.vy *= 0.85;
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // Main Canvas Area
+            Center(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final double boundingSize = math.min(constraints.maxWidth, constraints.maxHeight - 220);
+                  final Size canvasSize = Size(boundingSize, boundingSize);
+
+                  return GestureDetector(
+                    onPanStart: (d) => setState(() => touchPosition = d.localPosition),
+                    onPanUpdate: (d) => setState(() => touchPosition = d.localPosition),
+                    onPanEnd: (_) => setState(() => touchPosition = null),
+                    child: Container(
+                      width: canvasSize.width,
+                      height: canvasSize.height,
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: currentStand == StandAbility.zaWarudo
+                              ? Colors.amber.withOpacity(0.5)
+                              : (currentStand == StandAbility.kingCrimson
+                                  ? Colors.redAccent.withOpacity(0.5)
+                                  : const Color(0xFFFFD700).withOpacity(0.2)),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: CustomPaint(
+                        painter: JoJoStandPainter(
+                          particles: particles,
+                          distortion: dynamicDistortion,
+                          touchPosition: touchPosition,
+                          realm: activeRealm,
+                          clockAngle: clockAngle,
+                          currentStand: currentStand,
+                          auraEnergy: standAuraEnergy,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // Top Menu: Realm Selector
+            Positioned(
+              top: 8,
+              left: 12,
+              right: 12,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: InterstellarRealm.values.map((realm) {
+                    bool isSelected = activeRealm == realm;
+                    String label = realm.name;
+                    if (realm == InterstellarRealm.chronosClock) label = "Celestial Clock";
+                    if (realm == InterstellarRealm.eldritchRings) label = "Tao Mandalas";
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 3.0),
+                      child: ChoiceChip(
+                        label: Text(
+                          label.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.black : Colors.white70,
+                          ),
+                        ),
+                        selected: isSelected,
+                        selectedColor: const Color(0xFFFFD700),
+                        backgroundColor: Colors.white10,
+                        onSelected: (val) {
+                          if (val) setState(() => activeRealm = realm);
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+
+            // Bottom Dashboard: JoJo Stand Powers UI
+            Positioned(
+              bottom: 12,
+              left: 12,
+              right: 12,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.65),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      currentStand == StandAbility.zaWarudo
+                          ? "DIO: ZA WARUDO! (TIME STOPPED)"
+                          : (currentStand == StandAbility.kingCrimson
+                              ? "DIAVOLO: KING CRIMSON (TIME ERASED)"
+                              : (currentStand == StandAbility.bitesTheDust
+                                  ? "KIRA: BITES THE DUST (TIME REWOUND)"
+                                  : (currentStand == StandAbility.madeInHeaven
+                                      ? "PUCCI: MADE IN HEAVEN (INFINITE SPEED)"
+                                      : "SELECT A STAND POWER TO MANIPULATE TIME"))),
+                      style: TextStyle(
+                        fontFamily: 'Courier',
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                        color: currentStand == StandAbility.zaWarudo
+                            ? Colors.amberAccent
+                            : (currentStand == StandAbility.kingCrimson
+                                ? Colors.redAccent
+                                : (currentStand == StandAbility.bitesTheDust ? Colors.pinkAccent : Colors.cyanAccent)),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // DIO: Za Warudo
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.amber,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            ),
+                            icon: const Icon(Icons.pause_circle_filled, size: 14),
+                            label: const Text("ZA WARUDO", style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                            onPressed: () => _activateStand(StandAbility.zaWarudo),
+                          ),
+                          const SizedBox(width: 6),
+
+                          // Diavolo: King Crimson
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.redAccent,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            ),
+                            icon: const Icon(Icons.flash_on, size: 14),
+                            label: const Text("KING CRIMSON", style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                            onPressed: () => _activateStand(StandAbility.kingCrimson),
+                          ),
+                          const SizedBox(width: 6),
+
+                          // Kira: Bites The Dust
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.pinkAccent,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            ),
+                            icon: const Icon(Icons.replay, size: 14),
+                            label: const Text("BITES THE DUST", style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                            onPressed: () => _activateStand(StandAbility.bitesTheDust),
+                          ),
+                          const SizedBox(width: 6),
+
+                          // Pucci: Made In Heaven
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.cyanAccent,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            ),
+                            icon: const Icon(Icons.speed, size: 14),
+                            label: const Text("MADE IN HEAVEN", style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                            onPressed: () => _activateStand(StandAbility.madeInHeaven),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class JoJoParticle {
+  final int id;
+  double x;
+  double y;
+  final double homeX;
+  final double homeY;
+  double vx = 0;
+  double vy = 0;
+  final double phase;
+
+  JoJoParticle({
+    required this.id,
+    required this.homeX,
+    required this.homeY,
+    required this.phase,
+  })  : x = homeX,
+        y = homeY;
+}
+
+class JoJoStandPainter extends CustomPainter {
+  final List<JoJoParticle> particles;
+  final double distortion;
+  final Offset? touchPosition;
+  final InterstellarRealm realm;
+  final double clockAngle;
+  final StandAbility currentStand;
+  final double auraEnergy;
+
+  JoJoStandPainter({
+    required this.particles,
+    required this.distortion,
+    required this.touchPosition,
+    required this.realm,
+    required this.clockAngle,
+    required this.currentStand,
+    required this.auraEnergy,
+  });
+
+  static const List<String> romanNumerals = [
+    'XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Offset center = Offset(size.width / 2, size.height / 2);
+    final double radius = size.width * 0.42;
+
+    // 1. Draw Stand Special Screen Flash Overlays
+    if (currentStand == StandAbility.zaWarudo) {
+      // Inverted Monochrome Background Overlay
+      final Paint zaWarudoInvert = Paint()..color = Colors.amber.withOpacity(0.12);
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), zaWarudoInvert);
+    } else if (currentStand == StandAbility.kingCrimson) {
+      // Blood-Red Glitch Distortion Overlay
+      final Paint kingCrimsonRed = Paint()..color = Colors.red.withOpacity(0.15);
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), kingCrimsonRed);
+    }
+
+    // 2. Draw Roman Numeral Clock Face
+    final Paint rimPaint = Paint()
+      ..color = currentStand == StandAbility.zaWarudo
+          ? Colors.amber
+          : (currentStand == StandAbility.kingCrimson ? Colors.redAccent : const Color(0xFFFFD700).withOpacity(0.4))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    canvas.drawCircle(center, radius, rimPaint);
+    canvas.drawCircle(center, radius - 12.0, rimPaint..strokeWidth = 0.8);
+
+    for (int i = 0; i < 12; i++) {
+      double angle = (i * (math.pi * 2 / 12)) - (math.pi / 2);
+      double textR = radius - 28.0;
+      double x = center.dx + textR * math.cos(angle);
+      double y = center.dy + textR * math.sin(angle);
+
+      final TextPainter textPainter = TextPainter(
+        text: TextSpan(
+          text: romanNumerals[i],
+          style: TextStyle(
+            fontFamily: 'Times New Roman',
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: currentStand == StandAbility.zaWarudo
+                ? Colors.amberAccent
+                : (currentStand == StandAbility.kingCrimson ? Colors.redAccent : const Color(0xFFFFD700)),
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      textPainter.paint(canvas, Offset(x - textPainter.width / 2, y - textPainter.height / 2));
+    }
+
+    // 3. Draw Dynamic Clock Hands
+    final Paint handPaint = Paint()
+      ..color = currentStand == StandAbility.zaWarudo
+          ? Colors.amberAccent
+          : (currentStand == StandAbility.kingCrimson ? Colors.redAccent : const Color(0xFFFFD700))
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+
+    double minHandLen = radius - 45.0;
+    Offset minHandEnd = Offset(
+      center.dx + minHandLen * math.cos(clockAngle - math.pi / 2),
+      center.dy + minHandLen * math.sin(clockAngle - math.pi / 2),
+    );
+    canvas.drawLine(center, minHandEnd, handPaint);
+
+    double hourHandLen = radius - 75.0;
+    Offset hourHandEnd = Offset(
+      center.dx + hourHandLen * math.cos((clockAngle / 12) - math.pi / 2),
+      center.dy + hourHandLen * math.sin((clockAngle / 12) - math.pi / 2),
+    );
+    canvas.drawLine(center, hourHandEnd, handPaint..strokeWidth = 3.5);
+
+    // 4. Render Particles with Stand Aura Palette
+    for (var p in particles) {
+      Color particleColor = const Color(0xFFFFD700);
+      if (currentStand == StandAbility.zaWarudo) particleColor = Colors.amberAccent;
+      if (currentStand == StandAbility.kingCrimson) particleColor = Colors.redAccent;
+      if (currentStand == StandAbility.bitesTheDust) particleColor = Colors.pinkAccent;
+      if (currentStand == StandAbility.madeInHeaven) particleColor = Colors.cyanAccent;
+
+      canvas.drawCircle(Offset(p.x, p.y), 1.3, Paint()..color = particleColor.withOpacity(0.85));
+    }
+
+    // 5. Stand Activation Wave Aura Effect
+    if (auraEnergy > 0) {
+      final Paint auraWave = Paint()
+        ..color = (currentStand == StandAbility.zaWarudo
+                ? Colors.amber
+                : (currentStand == StandAbility.kingCrimson ? Colors.redAccent : Colors.cyanAccent))
+            .withOpacity(auraEnergy * 0.35)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
+
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), auraWave);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant JoJoStandPainter oldDelegate) => true;
+}
