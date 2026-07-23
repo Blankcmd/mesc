@@ -1,0 +1,600 @@
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const CosmicMultiverseApp());
+}
+
+class CosmicMultiverseApp extends StatelessWidget {
+  const CosmicMultiverseApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF010103),
+      ),
+      debugShowCheckedModeBanner: false,
+      home: const SpacetimeDistortionLab(),
+    );
+  }
+}
+
+enum InterstellarRealm {
+  bigBang,        // Primordial Singular Expansion / Inflation
+  milkyWay,       // 4-Arm Logarithmic Spiral Galaxy
+  starClusters,   // Gravitational Star Clusters
+  gargantua,      // Accretion Disk & Event Horizon
+  wormhole,       // Radial Tunnel Velocity Streaks
+  cosmicStrings,  // Interconnected Energy Grid Mesh
+  tesseractGrid,  // Hyper-dimensional Lattice Snap
+}
+
+enum GravityForceMode { pull, push }
+
+class SpacetimeDistortionLab extends StatefulWidget {
+  const SpacetimeDistortionLab({super.key});
+
+  @override
+  State<SpacetimeDistortionLab> createState() => _SpacetimeDistortionLabState();
+}
+
+class _SpacetimeDistortionLabState extends State<SpacetimeDistortionLab>
+    with SingleTickerProviderStateMixin {
+  static const int seedCount = 1400; // Increased density for galaxy arms
+  late List<TimeParticle> particles;
+  late AnimationController _physicsTicker;
+
+  // Interstellar Physics State
+  Offset? gravityWell;
+  double dynamicDistortion = 0.0;
+  InterstellarRealm activeRealm = InterstellarRealm.bigBang;
+  GravityForceMode forceMode = GravityForceMode.pull;
+  double timeDilation = 1.0;
+  double warpEnergy = 0.0; // Handles hyper-space transition flash
+  bool isBigCrunch = false; // Toggles Big Bang vs Big Crunch state
+  double inflationEnergy = 1.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeParticles();
+
+    _physicsTicker = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..addListener(_updateSpacetimePhysics);
+
+    _physicsTicker.repeat();
+  }
+
+  void _initializeParticles() {
+    const double center = 300.0;
+    final double phi = (math.sqrt(5) + 1) / 2;
+    const double tau = math.pi * 2;
+    final math.Random rand = math.Random(42);
+
+    particles = List.generate(seedCount, (i) {
+      final double theta = i * tau / phi;
+      final double r = math.sqrt(i) * 7.8;
+
+      double homeX = center + r * math.cos(theta);
+      double homeY = center - r * math.sin(theta);
+
+      // Random angles & speeds for Big Bang velocity vectors
+      double bangAngle = rand.nextDouble() * tau;
+      double bangSpeed = rand.nextDouble() * 12.0 + 2.0;
+
+      // Spiral Galaxy logarithmic parameters (4 arms)
+      int armIndex = i % 4;
+      double armAngleOffset = armIndex * (tau / 4);
+      double spiralDist = (i / seedCount) * 260.0;
+      double spiralAngle = armAngleOffset + (spiralDist * 0.035);
+
+      return TimeParticle(
+        homeX: homeX,
+        homeY: homeY,
+        id: i,
+        bangVx: math.cos(bangAngle) * bangSpeed,
+        bangVy: math.sin(bangAngle) * bangSpeed,
+        galaxyRadius: spiralDist,
+        galaxyAngle: spiralAngle,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _physicsTicker.dispose();
+    super.dispose();
+  }
+
+  void _triggerWarpJump(InterstellarRealm newRealm) {
+    setState(() {
+      warpEnergy = 1.0;
+      activeRealm = newRealm;
+      if (newRealm == InterstellarRealm.bigBang) {
+        inflationEnergy = 1.0;
+        isBigCrunch = false;
+      }
+    });
+  }
+
+  void _triggerInflationPulse() {
+    setState(() {
+      if (activeRealm == InterstellarRealm.bigBang) {
+        isBigCrunch = !isBigCrunch;
+        if (!isBigCrunch) inflationEnergy = 1.0;
+      } else {
+        warpEnergy = 0.8;
+      }
+    });
+  }
+
+  void _updateSpacetimePhysics() {
+    setState(() {
+      final Offset? well = gravityWell;
+
+      // Cool down warp flash animation
+      if (warpEnergy > 0) warpEnergy = (warpEnergy - 0.05).clamp(0.0, 1.0);
+
+      if (well != null) {
+        dynamicDistortion += (1.0 - dynamicDistortion) * 0.1;
+      } else {
+        dynamicDistortion += (0.0 - dynamicDistortion) * 0.08;
+      }
+
+      final double center = 300.0;
+      final double time = DateTime.now().millisecondsSinceEpoch / 1000.0 * timeDilation;
+
+      for (var p in particles) {
+        double targetX = p.homeX;
+        double targetY = p.homeY;
+
+        // --- REALM-SPECIFIC BASE DYNAMICS ---
+        switch (activeRealm) {
+          case InterstellarRealm.bigBang:
+            if (isBigCrunch) {
+              // Collapse to central Singularity
+              targetX = center;
+              targetY = center;
+            } else {
+              // Cosmic Primordial Expansion
+              double currentExpansion = math.sin(time * 0.5) * 80.0 + 120.0;
+              targetX = center + p.bangVx * (currentExpansion * 0.15);
+              targetY = center + p.bangVy * (currentExpansion * 0.15);
+            }
+            break;
+
+          case InterstellarRealm.milkyWay:
+            // 4-Arm Logarithmic Spiral Rotation
+            double orbitalSpeed = (300.0 / (p.galaxyRadius + 20.0)) * 0.02 * timeDilation;
+            p.galaxyAngle += orbitalSpeed;
+            targetX = center + p.galaxyRadius * math.cos(p.galaxyAngle);
+            targetY = center + p.galaxyRadius * math.sin(p.galaxyAngle);
+            break;
+
+          case InterstellarRealm.starClusters:
+            // Globular N-body Cluster Orbits (3 cluster centers)
+            int clusterGroup = p.id % 3;
+            double clusterCenterX = center + (clusterGroup == 0 ? -120 : (clusterGroup == 1 ? 120 : 0));
+            double clusterCenterY = center + (clusterGroup == 2 ? 120 : -60);
+            double clusterAngle = time * (0.8 + clusterGroup * 0.3) + (p.id * 0.1);
+            double clusterDist = (p.id % 50) * 1.5 + 10.0;
+            targetX = clusterCenterX + clusterDist * math.cos(clusterAngle);
+            targetY = clusterCenterY + clusterDist * math.sin(clusterAngle);
+            break;
+
+          case InterstellarRealm.gargantua:
+            // Accretion Disk Orbital Drift
+            double dxCenter = p.homeX - center;
+            double dyCenter = p.homeY - center;
+            double distCenter = math.sqrt(dxCenter * dxCenter + dyCenter * dyCenter);
+            double angle = math.atan2(dyCenter, dxCenter) + (0.02 * (300 / (distCenter + 20))) * timeDilation;
+            targetX = center + distCenter * math.cos(angle);
+            targetY = center + distCenter * math.sin(angle);
+            break;
+
+          case InterstellarRealm.wormhole:
+            // Radial Tunnel Expansion Effect
+            double dxWorm = p.homeX - center;
+            double dyWorm = p.homeY - center;
+            double distWorm = math.sqrt(dxWorm * dxWorm + dyWorm * dyWorm);
+            double tunnelPulse = math.sin(time * 2.0 + distWorm * 0.05) * 15.0;
+            targetX = p.homeX + (dxWorm / (distWorm + 1)) * tunnelPulse;
+            targetY = p.homeY + (dyWorm / (distWorm + 1)) * tunnelPulse;
+            break;
+
+          case InterstellarRealm.cosmicStrings:
+            // Quantum String Vibration
+            targetX = p.homeX + math.sin(time * 3.0 + p.id) * 4.0;
+            targetY = p.homeY + math.cos(time * 2.5 + p.id) * 4.0;
+            break;
+
+          case InterstellarRealm.tesseractGrid:
+            // Hyper-dimensional Quantized Grid Snap
+            targetX = (p.homeX / 20.0).roundToDouble() * 20.0 + math.sin(time + p.id % 5) * 3.0;
+            targetY = (p.homeY / 20.0).roundToDouble() * 20.0 + math.cos(time + p.id % 5) * 3.0;
+            break;
+        }
+
+        if (well != null) {
+          // --- GRAVITATIONAL WELL / WHITE HOLE PHYSICS ---
+          double dx = well.dx - p.x;
+          double dy = well.dy - p.y;
+          double distance = math.sqrt(dx * dx + dy * dy);
+          if (distance < 5) distance = 5;
+
+          double pullForce = (350.0 / distance).clamp(0.0, 12.0) * timeDilation;
+          double perpX = -dy / distance;
+          double perpY = dx / distance;
+
+          double direction = (forceMode == GravityForceMode.pull) ? 1.0 : -1.8;
+
+          p.vx += (dx / distance) * pullForce * 0.18 * direction + (perpX * pullForce * 0.3 * direction);
+          p.vy += (dy / distance) * pullForce * 0.18 * direction + (perpY * pullForce * 0.3 * direction);
+
+          p.vx *= 0.91;
+          p.vy *= 0.91;
+
+          p.x += p.vx;
+          p.y += p.vy;
+        } else {
+          // --- SPACETIME MEMORY SNAPBACK WITH DAMPENING ---
+          double speed = (activeRealm == InterstellarRealm.bigBang && isBigCrunch) ? 0.15 : 0.08;
+          p.x += (targetX - p.x) * speed * timeDilation;
+          p.y += (targetY - p.y) * speed * timeDilation;
+          p.vx *= 0.85;
+          p.vy *= 0.85;
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Stack(
+          children: [
+            // Interactive Space-Time Canvas
+            Center(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final double boundingSize = math.min(constraints.maxWidth, constraints.maxHeight - 160);
+                  final Size canvasSize = Size(boundingSize, boundingSize);
+
+                  return GestureDetector(
+                    onPanStart: (d) => setState(() => gravityWell = d.localPosition),
+                    onPanUpdate: (d) => setState(() => gravityWell = d.localPosition),
+                    onPanEnd: (_) => setState(() => gravityWell = null),
+                    child: Container(
+                      width: canvasSize.width,
+                      height: canvasSize.height,
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white.withOpacity(0.05)),
+                      ),
+                      child: CustomPaint(
+                        painter: HolographicVortexPainter(
+                          particles: particles,
+                          distortion: dynamicDistortion,
+                          wellLocation: gravityWell,
+                          realm: activeRealm,
+                          warpEnergy: warpEnergy,
+                          forceMode: forceMode,
+                          isBigCrunch: isBigCrunch,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // Top Dashboard: Multiverse Realm Switcher
+            Positioned(
+              top: 10,
+              left: 16,
+              right: 16,
+              child: Column(
+                children: [
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: InterstellarRealm.values.map((realm) {
+                        bool isSelected = activeRealm == realm;
+                        String label = realm.name;
+                        if (realm == InterstellarRealm.bigBang) label = "Big Bang";
+                        if (realm == InterstellarRealm.milkyWay) label = "Milky Way";
+                        if (realm == InterstellarRealm.starClusters) label = "Star Clusters";
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                          child: ChoiceChip(
+                            label: Text(
+                              label.toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected ? Colors.black : Colors.white70,
+                              ),
+                            ),
+                            selected: isSelected,
+                            selectedColor: const Color(0xFF00FFE0),
+                            backgroundColor: Colors.white10,
+                            onSelected: (val) {
+                              if (val) _triggerWarpJump(realm);
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Bottom Dashboard: Cosmic Controls
+            Positioned(
+              bottom: 15,
+              left: 20,
+              right: 20,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    gravityWell != null
+                        ? (forceMode == GravityForceMode.pull
+                            ? 'EVENT HORIZON: SINGULARITY ACTIVE'
+                            : 'WHITE HOLE: SPACE-TIME REPULSION FIELD')
+                        : (activeRealm == InterstellarRealm.bigBang
+                            ? (isBigCrunch ? 'STATE: COSMIC BIG CRUNCH (COLLAPSE)' : 'STATE: PRIMORDIAL INFLATION (EXPANSION)')
+                            : 'INTERACT WITH CANVAS TO DISTORT SPACETIME'),
+                    style: TextStyle(
+                      fontFamily: 'Courier',
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                      color: gravityWell != null
+                          ? (forceMode == GravityForceMode.pull ? Colors.pinkAccent : Colors.amberAccent)
+                          : Colors.cyanAccent.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Big Bang / Crunch Toggle Action Button
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: activeRealm == InterstellarRealm.bigBang && isBigCrunch
+                              ? Colors.purple.shade900
+                              : const Color(0xFF00FFE0),
+                          foregroundColor: activeRealm == InterstellarRealm.bigBang && isBigCrunch
+                              ? Colors.white
+                              : Colors.black,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                        icon: Icon(
+                          activeRealm == InterstellarRealm.bigBang
+                              ? (isBigCrunch ? Icons.compress : Icons.wb_sunny)
+                              : Icons.bolt,
+                          size: 16,
+                        ),
+                        label: Text(
+                          activeRealm == InterstellarRealm.bigBang
+                              ? (isBigCrunch ? "BIG BANG" : "BIG CRUNCH")
+                              : "WARP PULSE",
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                        onPressed: _triggerInflationPulse,
+                      ),
+
+                      // Toggle Pull / Push Force
+                      IconButton.filledTonal(
+                        icon: Icon(
+                          forceMode == GravityForceMode.pull ? Icons.compress : Icons.expand,
+                          size: 18,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            forceMode = forceMode == GravityForceMode.pull
+                                ? GravityForceMode.push
+                                : GravityForceMode.pull;
+                          });
+                        },
+                      ),
+
+                      // Time-Dilation Slider
+                      Row(
+                        children: [
+                          const Icon(Icons.timelapse, size: 16, color: Colors.cyanAccent),
+                          SizedBox(
+                            width: 90,
+                            child: Slider(
+                              min: 0.1,
+                              max: 2.5,
+                              value: timeDilation,
+                              activeColor: Colors.cyanAccent,
+                              inactiveColor: Colors.white10,
+                              onChanged: (v) => setState(() => timeDilation = v),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class TimeParticle {
+  final int id;
+  double x;
+  double y;
+  final double homeX;
+  final double homeY;
+  double vx = 0;
+  double vy = 0;
+
+  // Big Bang Vectors
+  final double bangVx;
+  final double bangVy;
+
+  // Galaxy Spiral Variables
+  final double galaxyRadius;
+  double galaxyAngle;
+
+  TimeParticle({
+    required this.homeX,
+    required this.homeY,
+    required this.id,
+    required this.bangVx,
+    required this.bangVy,
+    required this.galaxyRadius,
+    required this.galaxyAngle,
+  })  : x = homeX,
+        y = homeY;
+}
+
+class HolographicVortexPainter extends CustomPainter {
+  final List<TimeParticle> particles;
+  final double distortion;
+  final Offset? wellLocation;
+  final InterstellarRealm realm;
+  final double warpEnergy;
+  final GravityForceMode forceMode;
+  final bool isBigCrunch;
+
+  HolographicVortexPainter({
+    required this.particles,
+    required this.distortion,
+    required this.wellLocation,
+    required this.realm,
+    required this.warpEnergy,
+    required this.forceMode,
+    required this.isBigCrunch,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Offset center = Offset(size.width / 2, size.height / 2);
+
+    // 1. Draw Environmental Visual Features
+    if (realm == InterstellarRealm.milkyWay) {
+      // Supermassive Galactic Core Glow
+      final Paint coreGlow = Paint()
+        ..color = const Color(0xFFFFD700).withOpacity(0.25)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 40);
+      canvas.drawCircle(center, 50.0, coreGlow);
+    } else if (realm == InterstellarRealm.bigBang) {
+      // Primordial Fireball Core
+      final Paint bangGlow = Paint()
+        ..color = (isBigCrunch ? Colors.purpleAccent : Colors.deepOrangeAccent).withOpacity(0.3)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 50);
+      canvas.drawCircle(center, isBigCrunch ? 20.0 : 80.0, bangGlow);
+    } else if (realm == InterstellarRealm.gargantua) {
+      final Paint horizonPaint = Paint()
+        ..color = Colors.black
+        ..style = PaintingStyle.fill;
+
+      final Paint ringGlow = Paint()
+        ..color = Colors.amber.withOpacity(0.15)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 35);
+
+      canvas.drawCircle(center, 45.0, ringGlow);
+      canvas.drawCircle(center, 30.0, horizonPaint);
+    }
+
+    // 2. Gravity Well Glow
+    final Offset? well = wellLocation;
+    if (well != null) {
+      Color wellColor = forceMode == GravityForceMode.pull ? Colors.pinkAccent : Colors.amberAccent;
+      final Paint eventHorizonPaint = Paint()
+        ..color = wellColor.withOpacity(0.08)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30);
+      canvas.drawCircle(well, 70.0 + distortion * 20.0, eventHorizonPaint);
+    }
+
+    // 3. Cosmic Strings Mesh
+    if (realm == InterstellarRealm.cosmicStrings) {
+      final Paint stringPaint = Paint()
+        ..color = const Color(0x1500FFCC)
+        ..strokeWidth = 0.5;
+
+      for (int i = 0; i < particles.length; i += 12) {
+        var p1 = particles[i];
+        for (int j = i + 1; j < i + 4; j++) {
+          if (j < particles.length) {
+            var p2 = particles[j];
+            double distSq = (p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y);
+            if (distSq < 1600) {
+              canvas.drawLine(Offset(p1.x, p1.y), Offset(p2.x, p2.y), stringPaint);
+            }
+          }
+        }
+      }
+    }
+
+    // 4. Render Holographic Particles & Chromatic Separation
+    for (var p in particles) {
+      double velocity = math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      double chromaticOffset = (1.8 + velocity * 0.8) * (1.0 + distortion * 2.5) + (warpEnergy * 15.0);
+
+      Color cyan = const Color(0xAA00FFFF);
+      Color magenta = const Color(0xAAFF007F);
+
+      if (realm == InterstellarRealm.milkyWay) {
+        // Hot young blue outer stars vs warm gold inner core
+        cyan = Color.lerp(Colors.amberAccent, Colors.cyanAccent, (p.galaxyRadius / 260.0).clamp(0.0, 1.0))!;
+        magenta = Color.lerp(Colors.deepOrangeAccent, Colors.blueAccent, (p.galaxyRadius / 260.0).clamp(0.0, 1.0))!;
+      } else if (realm == InterstellarRealm.bigBang) {
+        cyan = isBigCrunch ? Colors.purpleAccent : Colors.yellowAccent;
+        magenta = isBigCrunch ? Colors.blueAccent : Colors.redAccent;
+      }
+
+      // Wormhole or Velocity Streaks
+      if ((realm == InterstellarRealm.wormhole || realm == InterstellarRealm.bigBang) && velocity > 0.5) {
+        final Paint streakPaint = Paint()
+          ..color = cyan.withOpacity(0.6)
+          ..strokeWidth = 1.2;
+        canvas.drawLine(
+          Offset(p.x, p.y),
+          Offset(p.x - p.vx * 3.0, p.y - p.vy * 3.0),
+          streakPaint,
+        );
+      } else {
+        // Cyan Shift
+        canvas.drawCircle(Offset(p.x - chromaticOffset, p.y), 1.4, Paint()..color = cyan);
+        // Magenta Shift
+        canvas.drawCircle(Offset(p.x + chromaticOffset, p.y), 1.4, Paint()..color = magenta);
+      }
+
+      // Core Depth Dot
+      canvas.drawCircle(
+        Offset(p.x, p.y),
+        0.8,
+        Paint()..color = Colors.white.withOpacity(0.85),
+      );
+    }
+
+    // 5. Warp Jump / Big Bang Flash Effect
+    if (warpEnergy > 0) {
+      final Paint warpFlash = Paint()..color = Colors.white.withOpacity(warpEnergy * 0.35);
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), warpFlash);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant HolographicVortexPainter oldDelegate) => true;
+}
